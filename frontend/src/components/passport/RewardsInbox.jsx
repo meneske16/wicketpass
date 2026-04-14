@@ -1,30 +1,46 @@
 import { useState } from "react"
+import { useFanPassport } from "../../hooks/useFanPassport"
 
-const REWARDS = [
-  { icon:"🎁", bg:"gold",   title:"Pepsi airdropped 50 tokens",      desc:"Sponsor reward for Legend fans • 2 days ago",        action:"Claim"  },
-  { icon:"🔓", bg:"green",  title:"Priority ticket access unlocked",  desc:"24hr early access to next PSL season • Active",      action:"Active" },
-  { icon:"🏆", bg:"purple", title:"VIP player meet & greet ballot",   desc:"Legend exclusive ballot entry • Ends April 20",      action:"Enter"  },
-  { icon:"🎫", bg:"gold",   title:"10% ticket discount — next purchase", desc:"Loyalty discount for Die-Hard+ fans • Valid 30 days", action:"Use" },
-]
+export default function RewardsInbox({ rewards = [], onClaim, signer, provider }) {
+  const { claimReward } = useFanPassport(signer, provider)
+  const [claiming, setClaiming] = useState(null)
 
-export default function RewardsInbox() {
-  const [claimed, setClaimed] = useState({})
+  async function handleClaim(index) {
+    setClaiming(index)
+    const result = await claimReward(index)
+    if (result.success) {
+      alert("✅ Reward claimed!\nTx: " + result.txHash)
+      if (onClaim) onClaim()
+    } else {
+      alert("❌ Failed: " + result.error)
+    }
+    setClaiming(null)
+  }
+
+  if (!rewards || rewards.length === 0) {
+    return (
+      <div style={{color:"rgba(240,244,255,0.3)",fontSize:"13px"}}>
+        No rewards yet. Attend matches to earn rewards!
+      </div>
+    )
+  }
 
   return (
     <div className="pp-rewards">
-      {REWARDS.map((r, i) => (
+      {rewards.map((r, i) => (
         <div className="pp-reward-item" key={i}>
-          <div className={`pp-reward-icon ${r.bg}`}>{r.icon}</div>
+          <div className="pp-reward-icon gold">🎁</div>
           <div className="pp-reward-info">
-            <div className="pp-reward-title">{r.title}</div>
-            <div className="pp-reward-desc">{r.desc}</div>
+            <div className="pp-reward-title">{r.description}</div>
+            <div className="pp-reward-desc">{r.sponsor} • {r.timestamp}</div>
           </div>
           <button
             className="pp-reward-claim"
-            onClick={() => setClaimed({ ...claimed, [i]: true })}
-            style={claimed[i] ? { color:"#B8FF4F", borderColor:"rgba(184,255,79,0.3)" } : {}}
+            onClick={() => handleClaim(r.index)}
+            disabled={r.claimed || claiming === r.index}
+            style={r.claimed ? { color:"#B8FF4F", borderColor:"rgba(184,255,79,0.3)" } : {}}
           >
-            {claimed[i] ? "Done ✓" : r.action}
+            {claiming === r.index ? "..." : r.claimed ? "Claimed ✓" : "Claim"}
           </button>
         </div>
       ))}

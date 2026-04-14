@@ -1,78 +1,161 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react"
 import Navbar from "../components/layout/Navbar"
-import MatchCard from "../components/tickets/MatchCard"
-import TicketCard from "../components/tickets/TicketCard"
-import BuyTicketModal from "../components/tickets/BuyTicketModal"
-import { PSL_MATCHES } from "../constants/matches"
+import ReputationRing from "../components/passport/ReputationRing"
+import TierBadge from "../components/passport/TierBadge"
+import TierProgressBar from "../components/passport/TierProgressBar"
+import RewardsInbox from "../components/passport/RewardsInbox"
+import { useWalletContext } from "../context/WalletContext"
+import { useFanPassport } from "../hooks/useFanPassport"
 
-const MY_TICKETS = [
-  { id:42,  match:"Karachi vs Lahore",      date:"April 14", seat:"B-12", stand:"West",  color:"linear-gradient(90deg,#00C170,#B8FF4F)" },
-  { id:89,  match:"Peshawar vs Quetta",     date:"April 15", seat:"A-05", stand:"North", color:"linear-gradient(90deg,#FFB800,#FF8C00)"  },
-  { id:124, match:"Islamabad vs Multan",    date:"April 16", seat:"C-22", stand:"East",  color:"linear-gradient(90deg,#6C3FC7,#00E5FF)"  },
+const TIERS = [
+  { icon:"⚪", name:"Rookie",   req:"0 matches",    color:"#888"    },
+  { icon:"⭐", name:"Fan",      req:"3+ matches",   color:"#c0c0c0" },
+  { icon:"🏅", name:"Die-Hard", req:"10+ matches",  color:"#FFB800" },
+  { icon:"🏆", name:"Legend",   req:"Multi-season", color:"#FFB800", current:true },
 ]
 
-const CARD_COLORS = [
-  { cls:"fp-card-kk", color:"#00C170" },
-  { cls:"fp-card-pz", color:"#FFB800" },
-  { cls:"fp-card-iu", color:"#6C3FC7" },
-  { cls:"fp-card-lq", color:"#00E5FF" },
-  { cls:"fp-card-hk", color:"#FF6B35" },
-  { cls:"fp-card-rp", color:"#00BFFF" },
-  { cls:"fp-card-ms", color:"#9B59B6" },
-  { cls:"fp-card-qu", color:"#FF4444" },
-]
+export default function FanPassport() {
+  const { wallet, signer, provider }   = useWalletContext()
+  const { getPassport, getAttendanceHistory, getRewards, createPassport, getNextTierInfo } = useFanPassport(signer, provider)
 
-export default function FanPortal() {
-  const navigate = useNavigate()
-  const [selectedMatch, setSelectedMatch] = useState(null)
+  const [passport, setPassport]   = useState(null)
+  const [history, setHistory]     = useState([])
+  const [rewards, setRewards]     = useState([])
+  const [loading, setLoading]     = useState(false)
+
+  useEffect(() => {
+    if (wallet && provider) loadData()
+  }, [wallet, provider])
+
+  async function loadData() {
+    setLoading(true)
+    const [p, h, r] = await Promise.all([
+      getPassport(wallet),
+      getAttendanceHistory(wallet),
+      getRewards(wallet),
+    ])
+    setPassport(p)
+    setHistory(h)
+    setRewards(r)
+    setLoading(false)
+  }
+
+  async function handleCreatePassport() {
+    const result = await createPassport()
+    if (result.success) {
+      alert("✅ Passport created!\nTx: " + result.txHash)
+      await loadData()
+    }
+  }
+
+  const score    = passport?.reputationScore || 0
+  const tierIdx  = passport?.tierIndex || 0
+  const nextTier = passport ? getNextTierInfo(tierIdx, score) : null
 
   return (
-    <div className="fp">
-      <div className="fp-bg-glow fp-g1" />
-      <div className="fp-bg-glow fp-g2" />
+    <div className="pp">
+      <div className="pp-glow pp-g1" />
+      <div className="pp-glow pp-g2" />
+      <Navbar active="passport" />
 
-      <Navbar active="portal" />
-
-      <div className="fp-body">
-        <div className="fp-greeting">
-          <h2>Good Evening, <span className="green">Legend</span> 🏏</h2>
-          <div className="fp-score-row">
-            <div className="fp-score-chip">
-              Reputation Score &nbsp; <span className="fp-score-num">847</span> &nbsp; ⭐
-            </div>
-            <div className="fp-wirescan-note">
-              WireFluid Network • All transactions verified on WireScan
-            </div>
+      <div className="pp-body">
+        {!wallet ? (
+          <div style={{textAlign:"center",padding:"60px",color:"rgba(240,244,255,0.4)"}}>
+            Connect your wallet to view your Fan Passport
           </div>
-        </div>
+        ) : loading ? (
+          <div style={{textAlign:"center",padding:"60px",color:"#00C170"}}>
+            Loading passport from WireFluid...
+          </div>
+        ) : !passport ? (
+          <div style={{textAlign:"center",padding:"60px"}}>
+            <div style={{fontSize:"40px",marginBottom:"16px"}}>🏏</div>
+            <div style={{fontSize:"18px",fontFamily:"Space Grotesk",fontWeight:"700",marginBottom:"8px"}}>
+              No Passport Found
+            </div>
+            <div style={{fontSize:"14px",color:"rgba(240,244,255,0.4)",marginBottom:"24px"}}>
+              Create your Fan Passport to start earning loyalty points
+            </div>
+            <button className="fp-buy-btn" style={{maxWidth:"240px",margin:"0 auto"}} onClick={handleCreatePassport}>
+              Create My Passport
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="pp-top">
+              <div className="pp-passport-card">
+                <ReputationRing score={score} max={1000} />
+                <TierBadge tier={passport.tier} />
+                <TierProgressBar
+                  current={score}
+                  max={nextTier?.needed ? score + nextTier.needed : 1000}
+                />
+                <div className="pp-wallet-addr">
+                  {wallet.slice(0,6)}...{wallet.slice(-4)} • WireFluid Network
+                </div>
+              </div>
 
-        <div className="fp-section-title">Upcoming Matches</div>
-        <div className="fp-matches">
-          {PSL_MATCHES.map((match, i) => (
-            <MatchCard
-              key={match.id}
-              match={match}
-              colorStyle={CARD_COLORS[i % CARD_COLORS.length]}
-              onBuy={() => setSelectedMatch(match)}
-            />
-          ))}
-        </div>
+              <div className="pp-stats-grid">
+                {[
+                  { icon:"🏟️", num:passport.matchesAttended, label:"Matches Attended", color:"green"  },
+                  { icon:"⭐",  num:score,                    label:"Reputation Score",  color:"gold"   },
+                  { icon:"✅",  num:`${passport.trustScore}%`,label:"Trust Score",       color:"green"  },
+                  { icon:"🎁",  num:rewards.filter(r=>!r.claimed).length, label:"Pending Rewards", color:"purple" },
+                  { icon:"🎟️", num:history.length,           label:"Matches on Chain",  color:"cyan"   },
+                  { icon:"🏪",  num:passport.cleanResales,   label:"Clean Resales",     color:"gold"   },
+                ].map((s) => (
+                  <div className={`pp-stat-card ${s.color}`} key={s.label}>
+                    <span className="pp-stat-icon">{s.icon}</span>
+                    <div className="pp-stat-num">{s.num}</div>
+                    <div className="pp-stat-label">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-        <div className="fp-section-title">My Tickets</div>
-        <div className="fp-tickets">
-          {MY_TICKETS.map((ticket) => (
-            <TicketCard key={ticket.id} ticket={ticket} />
-          ))}
-        </div>
+            <div className="pp-tiers-row">
+              {TIERS.map((t) => (
+                <div
+                  key={t.name}
+                  className={`pp-tier-card ${passport.tier === t.name ? "current" : ""}`}
+                >
+                  <span className="pp-tier-card-icon">{t.icon}</span>
+                  <div className="pp-tier-card-name" style={{ color: t.color }}>{t.name}</div>
+                  <div className="pp-tier-card-req">{t.req}</div>
+                  {passport.tier === t.name && <div className="pp-current-tag">Your Tier</div>}
+                </div>
+              ))}
+            </div>
+
+            <div className="pp-bottom">
+              <div className="pp-section">
+                <div className="pp-section-title">📅 Attendance Timeline</div>
+                <div className="pp-timeline">
+                  {history.length === 0 ? (
+                    <div style={{color:"rgba(240,244,255,0.3)",fontSize:"13px"}}>
+                      No matches attended yet. Buy a ticket and attend!
+                    </div>
+                  ) : history.map((h, i) => (
+                    <div className="pp-timeline-item" key={i}>
+                      <div className="pp-timeline-dot green" />
+                      <div className="pp-timeline-info">
+                        <div className="pp-timeline-match">{h.matchName}</div>
+                        <div className="pp-timeline-date">{h.timestamp}</div>
+                      </div>
+                      <div className="pp-timeline-badge">+{h.pointsEarned} pts</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pp-section">
+                <div className="pp-section-title">🎁 Rewards Inbox</div>
+                <RewardsInbox rewards={rewards} onClaim={loadData} signer={signer} provider={provider} />
+              </div>
+            </div>
+          </>
+        )}
       </div>
-
-      {selectedMatch && (
-        <BuyTicketModal
-          match={selectedMatch}
-          onClose={() => setSelectedMatch(null)}
-        />
-      )}
     </div>
   )
 }

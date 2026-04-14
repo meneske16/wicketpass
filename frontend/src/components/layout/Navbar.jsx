@@ -1,4 +1,6 @@
 import { useNavigate } from "react-router-dom"
+import { useWalletContext } from "../../context/WalletContext"
+import { useFanContext } from "../../context/FanContext"
 
 const LINKS = [
   { label:"Portal",      path:"/portal"      },
@@ -10,6 +12,17 @@ const LINKS = [
 
 export default function Navbar({ active }) {
   const navigate = useNavigate()
+  const { wallet, connect, loading, shortAddress } = useWalletContext()
+  const { passport } = useFanContext()
+
+  const tier = passport?.tier || null
+
+  const TIER_ICONS = {
+    "Rookie":   "⚪",
+    "Fan":      "⭐",
+    "Die-Hard": "🏅",
+    "Legend":   "🏆",
+  }
 
   return (
     <nav className="fp-nav">
@@ -17,6 +30,7 @@ export default function Navbar({ active }) {
         <div className="fp-logo-icon">🏏</div>
         <div className="fp-logo-txt">Wicket<span>Pass</span></div>
       </div>
+
       <div className="fp-navlinks">
         {LINKS.map((l) => (
           <div
@@ -28,9 +42,25 @@ export default function Navbar({ active }) {
           </div>
         ))}
       </div>
+
       <div className="fp-nav-right">
-        <div className="fp-tier-badge">🏆 Legend</div>
-        <div className="fp-wallet">0x9A18c...924a4</div>
+        {tier && (
+          <div className="fp-tier-badge">
+            {TIER_ICONS[tier] || "⭐"} {tier}
+          </div>
+        )}
+        {wallet ? (
+          <div className="fp-wallet">{shortAddress(wallet)}</div>
+        ) : (
+          <button
+            className="fp-buy-btn"
+            style={{padding:"8px 16px",fontSize:"13px",width:"auto"}}
+            onClick={connect}
+            disabled={loading}
+          >
+            {loading ? "Connecting..." : "🦊 Connect"}
+          </button>
+        )}
       </div>
     </nav>
   )
