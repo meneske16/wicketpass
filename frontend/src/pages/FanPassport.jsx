@@ -6,14 +6,20 @@ import AttendanceTimeline from "../components/passport/AttendanceTimeline"
 import RewardsInbox from "../components/passport/RewardsInbox"
 import TrustScore from "../components/passport/TrustScore"
 
-const STATS = [
-  { icon:"🏟️", num:"24",  label:"Matches Attended", color:"green"  },
-  { icon:"⭐",  num:"847", label:"Reputation Score",  color:"gold"   },
-  { icon:"✅",  num:"98%", label:"Trust Score",        color:"green"  },
-  { icon:"🎁",  num:"6",   label:"Rewards Earned",    color:"purple" },
-  { icon:"🎟️", num:"3",   label:"Active Tickets",    color:"cyan"   },
-  { icon:"🏪",  num:"2",   label:"Clean Resales",     color:"gold"   },
-]
+{[
+  { icon:"🏟️", num: String(passport.matchesAttended), label:"Matches Attended", color:"green"  },
+  { icon:"⭐",  num: String(score),                    label:"Reputation Score",  color:"gold"   },
+  { icon:"✅",  num: `${passport.trustScore}%`,        label:"Trust Score",       color:"green"  },
+  { icon:"🎁",  num: String(rewards.filter(r=>!r.claimed).length), label:"Pending Rewards", color:"purple" },
+  { icon:"🎟️", num: String(history.length),            label:"Matches on Chain",  color:"cyan"   },
+  { icon:"🏪",  num: String(passport.cleanResales),    label:"Clean Resales",     color:"gold"   },
+].map((s) => (
+  <div className={`pp-stat-card ${s.color}`} key={s.label}>
+    <span className="pp-stat-icon" style={{fontSize:"20px"}}>{s.icon}</span>
+    <div className="pp-stat-num">{s.num || "0"}</div>
+    <div className="pp-stat-label">{s.label}</div>
+  </div>
+))}
 
 const TIERS = [
   { icon:"⚪", name:"Rookie",   req:"0 matches",    color:"#888"    },
