@@ -12,6 +12,10 @@ export default function BuyNowModal({ item, onClose }) {
   return (
     <div className="mk-modal-overlay">
       <div className="mk-modal">
+
+        {/* ✅ ADD THIS LINE ONLY */}
+        <button className="mk-modal-close" onClick={onClose}>×</button>
+
         <div className="mk-modal-icon">🎟️</div>
         <div className="mk-modal-title">{item.match}</div>
         <div className="mk-modal-sub">{item.date} • {item.venue}</div>
