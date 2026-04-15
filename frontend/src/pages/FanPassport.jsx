@@ -67,7 +67,7 @@ export default function FanPassport() {
         <div className="pp-bottom">
           <div className="pp-section">
             <div className="pp-section-title">📅 Attendance Timeline</div>
-            <AttendanceTimeline />
+            <AttendanceTimeline history={history} />
           </div>
           <div className="pp-section">
             <div className="pp-section-title">🎁 Rewards Inbox</div>
